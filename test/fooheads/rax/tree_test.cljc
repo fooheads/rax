@@ -3,7 +3,8 @@
   (:require
     [clojure.test :refer [deftest is testing]]
     [fooheads.rax.tree :as tree]
-    [fooheads.tbl :refer [tbl]]))
+    [fooheads.tbl :refer [tbl]]
+    [fooheads.test :refer [thrown-ex-data]]))
 
 
 (def artist
@@ -189,16 +190,18 @@
              artist-album-track
              [{:title :track/name
                :artist {:name :artist/name}
-               :album {:title :album/title}}]))))))
+               :album {:title :album/title}}]))))
 
 
-(comment
-  ;; Error example
-  (tree/rel->tree
-    artist-album-with-error
-    [{:id :album/album-id
-      :title :album/title
-      :artist
-      {:id :artist/artist-id
-       :name :artist/name}}]))
+    (testing "error"
+      (is (= {:guard/msg "mapping requires 0..1, but data contains more than 1"}
+             (thrown-ex-data
+               [:guard/msg]
+               (tree/rel->tree
+                 artist-album-with-error
+                 [{:id :album/album-id
+                   :title :album/title
+                   :artist
+                   {:id :artist/artist-id
+                    :name :artist/name}}])))))))
 
