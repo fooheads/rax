@@ -1,0 +1,37 @@
+{:paths ["src"]
+ :deps
+ {com.fooheads/stdlib   {:mvn/version "0.4.3"}}
+
+ :aliases
+ {:dev
+  {:extra-paths ["dev"]
+   :extra-deps
+   {criterium/criterium {:mvn/version "0.4.6"}
+    com.fooheads/repl   {:git/url "https://github.com/fooheads/repl"
+                         :git/sha "a9218261c3aec8805476d3b9e8d477abf5b1be00"}}}
+
+  :dev/cljs
+  {:extra-deps
+   {org.clojure/clojurescript            {:mvn/version "1.11.132"}}
+   :main-opts ["-m" "cljs.main" "-co" "{:target :nodejs}" "-r"]}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps
+   {com.fooheads/test                    {:mvn/version "0.1.4"}
+    com.fooheads/tbl                     {:mvn/version "0.2.1"}
+    io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+   :main-opts ["-m" "cognitect.test-runner"]
+   :exec-fn cognitect.test-runner.api/test}
+
+  :test/cljs
+  {:extra-paths ["test"]
+   :extra-deps
+   {org.clojure/clojurescript        {:mvn/version "1.11.132"}
+    olical/cljs-test-runner          {:mvn/version "3.8.0"}}
+   :main-opts ["-m" "cljs-test-runner.main"]}
+
+  :build
+  {:deps {com.fooheads/build-clj {:mvn/version "1.0.0"}}
+   :ns-default fooheads.build}}}
+
