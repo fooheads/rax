@@ -84,6 +84,20 @@
                {:id :artist/artist-id
                 :name :artist/name}}]))))
 
+  (testing "list of 1-1 with a 0-1 (nil)"
+    (is (= [{:id 132 :title "I" :artist {:id 22 :name "Led Zeppelin"}}
+            {:id 131 :title "IV" :artist {:id 22 :name "Led Zeppelin"}}
+            {:id 120 :title "Are You Experienced?" :artist {:id 94 :name "Jimi Hendrix"}}
+            {:id 666 :title "The Number of the Beast" :artist nil}]
+
+           (tree/rel->tree
+             artist-album-one-album-without-artist
+             [{:id :album/album-id
+               :title :album/title
+               :artist
+               {:id :artist/artist-id
+                :name :artist/name}}]))))
+
   (testing "nested"
     (is (= [{:id 22
              :name "Led Zeppelin"
@@ -187,5 +201,4 @@
       :artist
       {:id :artist/artist-id
        :name :artist/name}}]))
-
 

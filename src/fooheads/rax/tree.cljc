@@ -14,13 +14,18 @@
   (into {} (filter (fn [[_k v]] (coll? v)) mapping)))
 
 
+(defn- blank-map?
+  [m]
+  (not (some some? (vals m))))
+
 
 (defn rel->tree
   ([rel mapping]
    (rel->tree rel mapping {}))
 
   ([rel mapping opts]
-   (let [inner-mapping (if (vector? mapping) (first mapping) mapping)
+   (let [opts (merge {:keep-blank-maps false} opts)
+         inner-mapping (if (vector? mapping) (first mapping) mapping)
          simple-attrs (simple-attrs inner-mapping)
          coll-attrs (coll-attrs inner-mapping)
 
@@ -34,8 +39,10 @@
                       coll-maps (forv [[k mapping] coll-attrs]
                                   {k (rel->tree tuples mapping opts)})
 
-                      m (apply merge m coll-maps)]]
+                      m (apply merge m coll-maps)]
 
+                :when (or (:keep-blank-maps opts)
+                          (not (blank-map? m)))]
            m)]
 
      (if (map? mapping)
