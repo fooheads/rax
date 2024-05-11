@@ -12,49 +12,41 @@
   (into {} (filter (fn [[_k v]] (coll? v)) mapping)))
 
 
-(defn rel->tree [rel mapping]
-  (let [inner-mapping (if (vector? mapping) (first mapping) mapping)
-        simple-attrs (simple-attrs inner-mapping)
-        coll-attrs (coll-attrs inner-mapping)
 
-        ;; Create an index, so that the keys are the simple attrs and the
-        ;; values are the complete tuples for each key
-        index (set/index rel (vals simple-attrs))
+(defn rel->tree
+  ([rel mapping]
+   (rel->tree rel mapping {}))
 
-        renames (set/map-invert simple-attrs)
+  ([rel mapping opts]
+   (let [inner-mapping (if (vector? mapping) (first mapping) mapping)
+         simple-attrs (simple-attrs inner-mapping)
+         coll-attrs (coll-attrs inner-mapping)
 
-        new-rel
-        (->>
-          index
-          (reduce
-            (fn [acc [m tuples]]
-              (let [renamed-m (set/rename-keys m renames)]
-                (if-not (seq coll-attrs)
-                  ;; No collections, just a simple top-level map
-                  (conj acc [renamed-m])
+         ;; An index, where the keys are the simple attrs and the
+         ;; values are all tuples matching the key
+         index (set/index rel (vals simple-attrs))
 
-                  ;; Handle each collection attribute
-                  (let [res
-                        (reduce
-                          (fn [acc-xs [k k-mappings]]
-                            (let [sub-mapping k-mappings
-                                  sub-m {k (rel->tree tuples sub-mapping)}]
-                              (conj acc-xs (merge renamed-m sub-m))))
-                          []
-                          coll-attrs)]
+         renames (set/map-invert simple-attrs)
 
-                    ;; Merge all collection attrs
-                    (conj acc (apply merge res))))))
-            [])
-          (flatten)
-          (vec))]
-
-      (if (map? mapping)
-        (do
-          (guard #(= 1 (count %)) new-rel "mapping requires 1-1, but data does not contain exactly 1"
-                 {:mapping mapping :rel rel :new-rel new-rel})
-          (first new-rel))
-
-        new-rel)))
+         new-rel
+         (->>
+           (for [[m tuples] index]
+             (let [m (set/rename-keys m renames)]
+               (if (empty? coll-attrs)
+                 m
+                 (->>
+                   (for [[k mapping] coll-attrs]
+                     {k (rel->tree tuples mapping opts)})
+                   (apply merge m)))))
+           (vec))]
 
 
+     (if (map? mapping)
+       (do
+         (guard #(< (count %) 2)
+                new-rel
+                "mapping requires 0..1, but data contains more than 1"
+                {:mapping mapping :rel rel :new-rel new-rel})
+         (first new-rel))
+
+       new-rel))))
