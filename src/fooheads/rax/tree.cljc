@@ -4,19 +4,20 @@
     [fooheads.stdlib :refer [forv guard]]))
 
 
-(defn- simple-attrs
-  [mapping]
+(defn- simple-attrs [mapping]
   (into {} (filter (fn [[_k v]] (keyword? v)) mapping)))
 
 
-(defn- coll-attrs
-  [mapping]
+(defn- coll-attrs [mapping]
   (into {} (filter (fn [[_k v]] (coll? v)) mapping)))
 
 
-(defn- blank-map?
-  [m]
+(defn- blank-map? [m]
   (not (some some? (vals m))))
+
+
+(defn- blank-map [ks]
+  (zipmap ks (repeat nil)))
 
 
 (defn rel->tree
@@ -54,3 +55,37 @@
          (first tree))
 
        tree))))
+
+
+(defn tree->rel
+  [tree mapping]
+  (cond
+    (vector? tree)
+    (vec (mapcat #(tree->rel % (first mapping)) tree))
+
+    :else
+    (let [simple-attrs (simple-attrs mapping)
+          coll-attrs (coll-attrs mapping)
+          m (->
+              ;; Start with a blank map, in order to always get all attrs into
+              ;; the tuple, even if tree represents a "left-join" and some
+              ;; values are nil
+              (blank-map (keys simple-attrs))
+              (merge tree)
+              (set/rename-keys simple-attrs)
+              (select-keys (vals simple-attrs)))
+
+           child-attrs-maps (forv [[k mapping] coll-attrs]
+                              (tree->rel (get tree k) mapping))
+
+          res
+          (if (empty? child-attrs-maps)
+            [m]
+            (reduce
+              (fn [acc child-maps]
+                (forv [child-map child-maps
+                       a acc]
+                  (merge child-map a)))
+              (cons [m] child-attrs-maps)))]
+      (vec res))))
+
