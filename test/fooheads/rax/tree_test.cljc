@@ -222,7 +222,65 @@
                    :title :album/title
                    :artist
                    {:id :artist/artist-id
-                    :name :artist/name}}])))))))
+                    :name :artist/name}}]))))))
+
+
+  (testing "constants"
+    (testing "top-level constant"
+      (is (= [{:id 22
+               :constant "constant value"
+               :name "Led Zeppelin"
+               :albums [{:id 132 :title "I"}
+                        {:id 131 :title "IV"}]}
+              {:id 94
+               :constant "constant value"
+               :name "Jimi Hendrix"
+               :albums [{:id 120 :title "Are You Experienced?"}]}]
+
+             (tree/rel->tree
+               rel-artist-album
+               [{:id :artist/artist-id
+                 :constant "constant value"
+                 :name :artist/name
+                 :albums
+                 [{:id :album/album-id
+                   :title :album/title}]}]))))
+
+    (testing "nested constant"
+      (is (= [{:id 22
+               :name "Led Zeppelin"
+               :albums [{:id 132
+                         :constant "constant value"
+                         :title "I"}
+                        {:id 131
+                         :constant "constant value"
+                         :title "IV"}]}
+              {:id 94
+               :name "Jimi Hendrix"
+               :albums [{:id 120
+                         :constant "constant value"
+                         :title "Are You Experienced?"}]}]
+
+             (tree/rel->tree
+               rel-artist-album
+               [{:id :artist/artist-id
+                 :name :artist/name
+                 :albums
+                 [{:id :album/album-id
+                   :constant "constant value"
+                   :title :album/title}]}]))))
+
+    (testing "only constants"
+      (is (= [{:id 1
+               :name "Jimi Hendrix"
+               :albums
+               [{:title "Are You Experienced?"}]}]
+             (tree/rel->tree
+               rel-artist-album
+               [{:id 1
+                 :name "Jimi Hendrix"
+                 :albums
+                 [{:title "Are You Experienced?"}]}]))))))
 
 
 (deftest tree->rel-test

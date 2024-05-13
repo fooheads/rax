@@ -4,12 +4,29 @@
     [fooheads.stdlib :refer [forv guard]]))
 
 
-(defn- simple-attrs [mapping]
-  (into {} (filter (fn [[_k v]] (keyword? v)) mapping)))
+(defn- category
+  "Defines a category from a mapping value.
+  :simple if it's a keyword (something that should be mapped)
+  :coll if it's a collection of some sort
+  :value if it's neither of the above and somethins that should just pass
+         through untouched."
+  [x]
+  (cond
+    (keyword? x) :simple
+    (coll? x) :coll
+    :else :value))
 
 
-(defn- coll-attrs [mapping]
-  (into {} (filter (fn [[_k v]] (coll? v)) mapping)))
+(defn- attr-category-fn
+  "Returns a pred that answers if a map-entry value is of a particular category"
+  [c]
+  (fn [arg]
+    (let [[_k v] arg]
+      (= c (category v)))))
+
+
+(defn- filter-attrs [category mapping]
+  (into {} (filter (attr-category-fn category) mapping)))
 
 
 (defn- blank-map? [m]
@@ -27,8 +44,9 @@
   ([rel mapping opts]
    (let [opts (merge {:keep-blank-maps false} opts)
          inner-mapping (if (vector? mapping) (first mapping) mapping)
-         simple-attrs (simple-attrs inner-mapping)
-         coll-attrs (coll-attrs inner-mapping)
+         simple-attrs (filter-attrs :simple inner-mapping)
+         coll-attrs (filter-attrs :coll inner-mapping)
+         value-attrs (filter-attrs :value inner-mapping)
 
          index (set/index rel (vals simple-attrs))
          renames (set/map-invert simple-attrs)
@@ -36,6 +54,8 @@
          tree
          (forv [[m tuples] index
                 :let [m (set/rename-keys m renames)
+                      constants (select-keys inner-mapping (keys value-attrs))
+                      m (merge m constants)
 
                       coll-maps (forv [[k mapping] coll-attrs]
                                   {k (rel->tree tuples mapping opts)})
@@ -64,8 +84,8 @@
     (vec (mapcat #(tree->rel % (first mapping)) tree))
 
     :else
-    (let [simple-attrs (simple-attrs mapping)
-          coll-attrs (coll-attrs mapping)
+    (let [simple-attrs (filter-attrs :simple mapping)
+          coll-attrs (filter-attrs :coll mapping)
           m (->
               ;; Start with a blank map, in order to always get all attrs into
               ;; the tuple, even if tree represents a "left-join" and some
