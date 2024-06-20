@@ -37,6 +37,28 @@
   (zipmap ks (repeat nil)))
 
 
+(defn- apply-generators [m generators mapping]
+  (reduce-kv
+    (fn [m k _v]
+      (if-let [gen (get generators k)]
+        (assoc m k (gen m k (mapping k)))
+        m))
+    m
+    m))
+
+
+(defn- introduce-foreign-keys
+  [rel fk-map]
+  (map
+    (fn [tuple]
+      (reduce
+        (fn [tuple [fk pk]]
+          (assoc tuple fk (tuple pk)))
+        tuple
+        fk-map))
+    rel))
+
+
 (defn rel->tree
   ([rel mapping]
    (rel->tree rel mapping {}))
@@ -78,34 +100,41 @@
 
 
 (defn tree->rel
-  [tree mapping]
-  (cond
-    (vector? tree)
-    (vec (mapcat #(tree->rel % (first mapping)) tree))
+  ([tree mapping]
+   (tree->rel tree mapping {}))
 
-    :else
-    (let [simple-attrs (filter-attrs :simple mapping)
-          coll-attrs (filter-attrs :coll mapping)
-          m (->
-              ;; Start with a blank map, in order to always get all attrs into
-              ;; the tuple, even if tree represents a "left-join" and some
-              ;; values are nil
-              (blank-map (keys simple-attrs))
-              (merge tree)
-              (set/rename-keys simple-attrs)
-              (select-keys (vals simple-attrs)))
+  ([tree mapping opts]
+   (cond
+     (vector? tree)
+     (vec (mapcat #(tree->rel % (first mapping) opts) tree))
 
-           child-attrs-maps (forv [[k mapping] coll-attrs]
-                              (tree->rel (get tree k) mapping))
+     :else
+     (let [simple-attrs (filter-attrs :simple mapping)
+           coll-attrs (filter-attrs :coll mapping)
+           m (->
+               ;; Start with a blank map, in order to always get all attrs into
+               ;; the tuple, even if tree represents a "left-join" and some
+               ;; values are nil
+               (blank-map (keys simple-attrs))
+               (merge tree)
+               (apply-generators (:generators opts) simple-attrs)
+               (set/rename-keys simple-attrs)
+               (select-keys (vals simple-attrs)))
 
-          res
-          (if (empty? child-attrs-maps)
-            [m]
-            (reduce
-              (fn [acc child-maps]
-                (forv [child-map child-maps
-                       a acc]
-                  (merge child-map a)))
-              (cons [m] child-attrs-maps)))]
-      (vec res))))
+            child-attrs-maps (forv [[k mapping] coll-attrs]
+                               (tree->rel (get tree k) mapping opts))
+
+           res
+           (if (empty? child-attrs-maps)
+             [m]
+             (reduce
+               (fn [acc child-maps]
+                 (forv [child-map child-maps
+                        a acc]
+                   (merge child-map a)))
+               (cons [m] child-attrs-maps)))]
+       (->
+         res
+         (introduce-foreign-keys (:fk-map opts))
+         vec)))))
 

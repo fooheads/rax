@@ -2,6 +2,7 @@
   {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
     [clojure.test :refer [deftest is testing]]
+    [fooheads.rax.sequence :as seq]
     [fooheads.rax.tree :as tree]
     [fooheads.setish :as set]
     [fooheads.tbl :refer [tbl]]
@@ -405,5 +406,35 @@
               :name :track/name
               :album {:title :album/title}
               :artist {:name :artist/name}
-              :tags [{:name :tag/name}]})))))
+              :tags [{:name :tag/name}]}))))
+
+  (testing "generated ids"
+    (is
+      (=
+        (tbl
+          | :artist/artist-id   | :artist/name   | :album/album-id   | :album/artist-id   | :album/title           |
+          | ------------------- | -------------- | ----------------- | ------------------ | ---------------------- |
+          | 1                   | "Led Zeppelin" | 1                 | 1                  | "I"                    |
+          | 1                   | "Led Zeppelin" | 2                 | 1                  | "IV"                   |)
+
+        (let [next-id (seq/sequence-gen)]
+
+          (tree/tree->rel
+            [{:name "Led Zeppelin"
+              :albums
+              [{:title "I"}
+               {:title "IV"}]}]
+
+            '[{?gen-id :artist/artist-id
+               :name :artist/name
+               :albums
+               [{:artist/artist-id :album/artist-id
+                 ?gen-id :album/album-id
+                 :title :album/title}]}]
+
+            {:generators
+             {'?gen-id (fn [_m _k v] (next-id v))}
+
+             :fk-map
+             {:album/artist-id :artist/artist-id}}))))))
 
