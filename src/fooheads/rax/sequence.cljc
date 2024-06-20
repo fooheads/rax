@@ -11,7 +11,8 @@
   the sequence 'name', and returns the next integer for that
   sequence. A sequence can also have a scope (see example).
 
-  Sequences starts at 1 by default, but can take a map as the starting state.
+  Sequences starts at 1 by default, but can take a opts with start state
+  :state and generator function :next-f
 
   Simple example
   `(def seq-f (sequence-gen))
@@ -28,14 +29,19 @@
    (seq-f :order-line/seq-num [:order/id 51])   ;; => 1
 
   Example with start state:
-  `(def seq-f (sequence-gen {:order/id 1000))
+  `(def seq-f (sequence-gen {:state {:order/id 1000}}))
    (seq-f :order/id)                            ;; => 1001`
+
+  Example with custom generator:
+  `(def seq-f (sequence-gen {:next-f (fn [x] (if x (dec x) -1))}))
+   (seq-f :order/id)                            ;; => -1`
   "
   ([]
    (sequence-gen {}))
-  ([state]
+  ([opts]
    (let [inc-f (fn [x] (if x (inc x) 1))
-         seqs (atom state)]
+         next-f (get opts :next-f inc-f)
+         seqs (atom (get opts :state {}))]
      (letfn
        [(gen-next-f
           ([k]
@@ -43,7 +49,7 @@
           ([k scope]
            (let [full-path (if scope [k scope] [k])]
              (get-in
-               (swap! seqs update-in full-path inc-f)
+               (swap! seqs update-in full-path next-f)
                full-path))))]
 
        gen-next-f))))
