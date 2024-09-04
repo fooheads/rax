@@ -436,5 +436,7 @@
              {'?gen-id (fn [_m _k v] (next-id v))}
 
              :fk-map
-             {:album/artist-id :artist/artist-id}}))))))
+             {:album/artist-id :artist/artist-id
+              ;; Non-existing pk:s should not be mapped to the relation
+              :some-foreign/key :some-primary/key}}))))))
 

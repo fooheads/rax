@@ -53,7 +53,9 @@
     (fn [tuple]
       (reduce
         (fn [tuple [fk pk]]
-          (assoc tuple fk (tuple pk)))
+          (if (tuple pk)
+            (assoc tuple fk (tuple pk))
+            tuple))
         tuple
         fk-map))
     rel))
