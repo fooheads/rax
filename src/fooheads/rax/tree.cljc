@@ -38,13 +38,14 @@
 
 
 (defn- apply-generators [m generators mapping]
-  (reduce-kv
-    (fn [m k _v]
-      (if-let [gen (get generators k)]
-        (assoc m k (gen m k (mapping k)))
-        m))
-    m
-    m))
+  (let [generators (or generators {})]
+    (reduce-kv
+      (fn [m k _v]
+        (if-let [gen (generators k)]
+          (assoc m k (gen m k (mapping k)))
+          m))
+      m
+      m)))
 
 
 (defn- introduce-foreign-keys

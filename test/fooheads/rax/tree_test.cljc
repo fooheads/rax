@@ -409,34 +409,37 @@
               :tags [{:name :tag/name}]}))))
 
   (testing "generated ids"
-    (is
-      (=
-        (tbl
-          | :artist/artist-id   | :artist/name   | :album/album-id   | :album/artist-id   | :album/title           |
-          | ------------------- | -------------- | ----------------- | ------------------ | ---------------------- |
-          | 1                   | "Led Zeppelin" | 1                 | 1                  | "I"                    |
-          | 1                   | "Led Zeppelin" | 2                 | 1                  | "IV"                   |)
+    (doseq [generators [(let [next-id (seq/sequence-gen)]
+                          {'?gen-id (fn [_m _k v] (next-id v))})
+                        (let [next-id (seq/sequence-gen)]
+                          (fn [k]
+                            (when (symbol? k)
+                              (fn [_m _k v] (next-id v)))))]]
+      (is
+        (=
+         (tbl
+           | :artist/artist-id   | :artist/name   | :album/album-id   | :album/artist-id   | :album/title           |
+           | ------------------- | -------------- | ----------------- | ------------------ | ---------------------- |
+           | 1                   | "Led Zeppelin" | 1                 | 1                  | "I"                    |
+           | 1                   | "Led Zeppelin" | 2                 | 1                  | "IV"                   |)
 
-        (let [next-id (seq/sequence-gen)]
+         (tree/tree->rel
+           [{:name "Led Zeppelin"
+             :albums
+             [{:title "I"}
+              {:title "IV"}]}]
 
-          (tree/tree->rel
-            [{:name "Led Zeppelin"
+           '[{?gen-id :artist/artist-id
+              :name :artist/name
               :albums
-              [{:title "I"}
-               {:title "IV"}]}]
+              [{:artist/artist-id :album/artist-id
+                ?gen-id :album/album-id
+                :title :album/title}]}]
 
-            '[{?gen-id :artist/artist-id
-               :name :artist/name
-               :albums
-               [{:artist/artist-id :album/artist-id
-                 ?gen-id :album/album-id
-                 :title :album/title}]}]
+           {:generators generators
 
-            {:generators
-             {'?gen-id (fn [_m _k v] (next-id v))}
-
-             :fk-map
-             {:album/artist-id :artist/artist-id
-              ;; Non-existing pk:s should not be mapped to the relation
-              :some-foreign/key :some-primary/key}}))))))
+            :fk-map
+            {:album/artist-id :artist/artist-id
+             ;; Non-existing pk:s should not be mapped to the relation
+             :some-foreign/key :some-primary/key}}))))))
 
