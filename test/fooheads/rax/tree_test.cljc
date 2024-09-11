@@ -317,7 +317,6 @@
                {:id :artist/artist-id
                 :name :artist/name}}]))))
 
-
   (testing "nested"
     (is (= (set/project
              rel-artist-album
@@ -331,12 +330,28 @@
                [{:id :album/album-id
                  :title :album/title}]}])))
 
+
     (is (= (set/project
              rel-artist-album
              [:artist/artist-id :artist/name :album/album-id :album/title])
 
            (tree/tree->rel
              tree-artist-album-track
+             [{:id :artist/artist-id
+               :name :artist/name
+               :albums
+               [{:id :album/album-id
+                 :title :album/title}]}]))))
+
+  (testing "nested with empty collection should look like a left-join"
+    (is (= (tbl
+             | :artist/artist-id | :artist/name   | :album/album-id | :album/title |
+             | ---               | ---            | ---             | ---          |
+             | 22                | "Led Zeppelin" |                 |              |
+             | 94                | "Jimi Hendrix" |                 |              |)
+
+           (tree/tree->rel
+             tree-artist
              [{:id :artist/artist-id
                :name :artist/name
                :albums

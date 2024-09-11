@@ -181,7 +181,7 @@
                        ;; map; a map with all keys but with nil values. This
                        ;; is necessary, in order to not loose the whole
                        ;; in the cartesian product if there are no parts.
-                       (or (seq res) (blank-map (rel-keys mapping)))))
+                       (or (seq res) [(blank-map (rel-keys mapping))])))
 
                    ;; The resulting rel is the cartiesian product of the whole
                    ;; and all its colls.
