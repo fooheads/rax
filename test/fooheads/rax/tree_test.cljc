@@ -433,28 +433,30 @@
       (is
         (=
          (tbl
-           | :artist/artist-id   | :artist/name   | :album/album-id   | :album/artist-id   | :album/title           |
-           | ------------------- | -------------- | ----------------- | ------------------ | ---------------------- |
-           | 1                   | "Led Zeppelin" | 1                 | 1                  | "I"                    |
-           | 1                   | "Led Zeppelin" | 2                 | 1                  | "IV"                   |)
+           | :artist/artist-id   | :artist/name   | :album/album-id   | :album/artist-id   | :album/title           | :album/producer-id     |
+           | ------------------- | -------------- | ----------------- | ------------------ | ---------------------- | ---------------------- |
+           | 1                   | "Led Zeppelin" | 1                 | 1                  | "I"                    | "Jimi Page"            |
+           | 1                   | "Led Zeppelin" | 2                 | 100                | "IV"                   |                        |)
 
          (tree/tree->rel
            [{:name "Led Zeppelin"
              :albums
-             [{:title "I"}
-              {:title "IV"}]}]
+             [{:title "I" :producer "Jimi Page"}
+              {:title "IV" :artist/artist-id 100}]}]
 
            '[{?gen-id :artist/artist-id
               :name :artist/name
               :albums
               [{:artist/artist-id :album/artist-id
                 ?gen-id :album/album-id
-                :title :album/title}]}]
+                :title :album/title
+                :producer :album/producer-id}]}]
 
            {:generators generators
 
             :fk-map
             {:album/artist-id :artist/artist-id
              ;; Non-existing pk:s should not be mapped to the relation
-             :some-foreign/key :some-primary/key}}))))))
+             :some-foreign/key :some-primary/key
+             :album/producer-id :producer/producer-id}}))))))
 

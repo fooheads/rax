@@ -54,8 +54,16 @@
     (fn [tuple]
       (reduce
         (fn [tuple [fk pk]]
-          (if (tuple pk)
+          (cond
+            ;; If an explicit fk already exist, leave it as is
+            (tuple fk)
+            tuple
+
+            ;; Normal case, link the child to the parent
+            (tuple pk)
             (assoc tuple fk (tuple pk))
+
+            :else
             tuple))
         tuple
         fk-map))
